@@ -1,0 +1,2 @@
+fastembed==0.9.1
+Pillow==13.0.0

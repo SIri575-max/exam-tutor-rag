@@ -1,0 +1,2 @@
+# Isolated CPU OCR pilot environment; do not install in the shared runtime.
+mineru==4.0.12

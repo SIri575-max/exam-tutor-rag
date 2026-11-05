@@ -1,0 +1,10 @@
+{
+  "primary_source_directory": "./data/local-textbook",
+  "generated_output_directory": "data/private/textbook_registry",
+  "recursive": false,
+  "include_extensions": [".pdf"],
+  "source_role": "textbook",
+  "new_source_role": "textbook",
+  "file_roles": {},
+  "file_editions": {}
+}

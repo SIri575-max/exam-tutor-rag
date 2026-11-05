@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "created_date": "2026-10-29",
+  "source_id": "external-660b-2026",
+  "source_sha256": "d7255773a04080760df6950999acee44082adb3af20acc94e1c7cc0a1e04d295",
+  "source_pages": 146,
+  "source_role": "private_external_evaluation_only",
+  "retrieval_corpus": "existing_textbook_questions_and_approved_source_context_only",
+  "source_in_retrieval_index": false,
+  "document_instructions_are_data": true,
+  "population": "All detectable top-level questions in the supplied B volume; filename 660 is not an audited item count.",
+  "stages": [
+    "Local OCR with PDF-page, image and parser hashes; original unchanged",
+    "Separate question stems, subquestions and reference answers with block coordinates",
+    "Audit numbering continuity, cross-page boundaries, formula OCR and missing material",
+    "Flag explicit textbook references and near-duplicate stems before grouped splitting",
+    "Freeze reviewed stems and answer labels before live model calls",
+    "Run retrieval baselines, then paired generation with blinded teacher review"
+  ],
+  "split": {
+    "unit": "underlying_problem_family_not_subquestion_or_photo_variant",
+    "development_fraction": 0.2,
+    "test_fraction": 0.8,
+    "assignment": "sha256(source_sha256 + family_id) modulo 5; zero is development",
+    "unresolved_duplicate_policy": "quarantine_pending_review",
+    "test_exposure_policy": "Once results are used to tune the system, relabel that subset development and reserve untouched families."
+  },
+  "strata": ["exact_textbook_duplicate", "parameter_or_wording_variant", "related_concept_new_problem", "outside_current_scope", "unresolved"],
+  "retrieval_arms": ["bm25", "vector", "hybrid", "adaptive_rag"],
+  "generation_arms": ["no_retrieval", "fixed_rag", "adaptive_rag"],
+  "automatic_metrics": ["ocr_completion", "numbering_gaps", "duplicate_flags", "request_success", "latency", "tokens", "source_id_and_page_validity"],
+  "reviewed_metrics": ["answer_correctness", "required_condition_consistency", "citation_support", "relevant_textbook_exercise_recall_at_5", "graded_relevance_ndcg_at_5"],
+  "labels": {
+    "relevance": "0 unrelated, 1 shared topic, 2 useful method/example, 3 exact or near-identical full conditions; null means unreviewed",
+    "math_correctness": "Teacher assigns pass/fail/partial against independently checked reference; model agreement is not a gold label.",
+    "citation_support": "Teacher confirms each cited passage supports the associated statement, beyond matching IDs."
+  },
+  "report_rules": [
+    "Use actual extracted and reviewed counts, not the title's nominal 660.",
+    "Keep scan OCR and corrected-text retrieval results separate.",
+    "Answer labels never enter retrieval, model prompt or question rewriting.",
+    "Report denominators, excluded cases, source overlap and pending reviews.",
+    "Do not equate retrieved candidates, valid citations or passed software tests with mathematical accuracy.",
+    "Do not attribute API Qwen-plus measurements to a local Qwen model."
+  ]
+}

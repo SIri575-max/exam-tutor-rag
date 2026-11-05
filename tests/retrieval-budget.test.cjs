@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('problem_study.js','utf8');
+const body=source.slice(source.indexOf('function retrievalBudgetPanel('),source.indexOf('\nlet studyRequest='));
+const context={esc:v=>String(v??'').replaceAll('<','&lt;')};
+vm.createContext(context);vm.runInContext(body,context);
+const data={route:'single_retrieval',retrieval_budget:{adaptive_enabled:true,recall_k:20,typed_lexical_k:20,practice_k:3,detailed_k:8,actual_detailed_count:6,actual_practice_counts:{example:2,exercise:3}}};
+let html=context.retrievalBudgetPanel(data);
+assert(html.includes('首轮候选上限：20题'));assert(html.includes('本次例题2、课后题3'));assert(html.includes('最多8题，本次6'));
+html=context.retrievalBudgetPanel({...data,route:'source_number_lookup'});
+assert(html.includes('跳过首轮召回'));assert(!html.includes('首轮候选上限：20题'));
+assert(context.retrievalBudgetPanel({}).includes('未记录'));
+console.log('Retrieval stage budget display checks passed');

@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('problem_study.js','utf8');
+const fragment=source.slice(source.indexOf('function studyBrief(d)'),source.indexOf('async function studyRun(){'));
+const c={esc:s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x])),studyTopics:()=>'',pageLinks:()=>''};
+vm.createContext(c);vm.runInContext(fragment,c);
+let html=c.studyBrief({status:'needs_problem_context',hits:[],message:'缺少总体',clarifications:['补充参数']});
+assert(html.includes('先补充题目条件')&&html.includes('补充参数'));assert(!html.includes('data-study-open'));
+html=c.studyBrief({hits:[]});assert(html.includes('当前范围未找到清晰候选')&&html.includes('筛选'));
+html=c.studyBrief({status:'request_failed',message:'<img src=x onerror=alert(1)>'});assert(!html.includes('<img'));assert(html.includes('暂未完成查题'));
+html=c.studyBrief({hits:[{label:'习题6.1 第6题',pages:[294]}],study:{query_topics:[]}});
+assert(html.includes('data-study-open="study-panel"')&&html.includes('data-study-open="generation-panel"'));
+assert(html.includes('习题6.1 第6题'));
+console.log('Study guidance, clarification, empty range and safe error-state checks passed');

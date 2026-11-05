@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('problem_study.js','utf8');
+const fragment=source.slice(source.indexOf('function correspondenceReason('),source.indexOf('async function studyRun(){'));
+const c={esc:s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x])),pageLinks:()=>'',studyTopics:()=>''};
+vm.createContext(c);vm.runInContext(fragment,c);
+const hit={id:'safe',label:'习题6.1第1题',section:'6.1',pages:[290],correspondence:{label:'所求量需核对',reasons:['<script>'],differences:['均值已知/未知不同']}};
+const d={hits:[hit],practice_groups:{exercise:[hit],example:[]},correspondence:{input_topics:[{label:'点估计及无偏性',pdf_page:289,basis:'题干任务线索',self_check:'能否计算期望？'}],self_check_notice:'仅为自查',matching_notice:'相关题候选'}};
+const html=c.studyBrief(d);
+assert(html.includes('先看相关例题')&&html.includes('再练相关课后题'));
+assert(html.includes('未找到这一类题')&&html.includes('点估计及无偏性')&&html.includes('能否计算期望'));
+assert(!html.includes('<script>')&&html.includes('&lt;script&gt;'));
+assert(html.includes('所求量需核对')&&html.includes('均值已知/未知不同'));
+assert(html.includes('data-detail="safe"')&&html.includes('data-page="289"'));
+console.log('Correspondence navigation: both types, empty state, source links, condition differences and escaping passed');

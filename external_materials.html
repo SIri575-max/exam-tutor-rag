@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>660B · 新题素材库</title>
+  <link rel="stylesheet" href="/assets/katex/katex.min.css">
+  <link rel="stylesheet" href="/math-render.css">
+  <style>
+    :root{font:15px/1.65 system-ui,"Microsoft YaHei",sans-serif;color:#233c33;background:#f4f7f5}
+    *{box-sizing:border-box}body{margin:0}header{background:white;border-bottom:1px solid #dce7e0;padding:14px 5vw;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+    a{color:#216d4c}main{width:min(1100px,92vw);margin:26px auto}h1{margin:0;font-size:30px}h2{font-size:20px;margin-top:0}p{margin:8px 0 16px}
+    .muted{color:#536d60}.card{background:white;border:1px solid #dae5dd;border-radius:12px;padding:20px;margin-top:16px;min-width:0}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}input,select,button,.action{font:inherit;border:1px solid #bacfc0;border-radius:7px;padding:7px 10px;background:white;color:inherit}
+    button,.action,summary{cursor:pointer}.action{background:#206849;color:white;text-decoration:none}.layout{display:grid;grid-template-columns:minmax(270px,1fr) minmax(0,2fr);gap:16px}
+    ol{padding:0;margin:0;list-style:none}li+li{border-top:1px solid #edf2ee}.question{display:block;text-decoration:none;padding:8px 4px;overflow-wrap:anywhere}.question:hover,.question[aria-current]{background:#eff7f1}
+    .question small{display:block;color:#536d60}.prose{white-space:pre-wrap;overflow-wrap:anywhere}.source-image{width:100%;height:auto;margin-top:12px}.notice{background:#fff7e5;padding:8px 12px;border-radius:6px}
+    @media(max-width:740px){.layout{grid-template-columns:1fr}.question-list{max-height:340px;overflow:auto}}
+  </style>
+</head>
+<body>
+  <header><strong>知题 · 660B</strong><a href="/problems">返回查题</a><a href="/benchmark">人工相关性核对</a></header>
+  <main>
+    <h1>660B 新题素材库</h1>
+    <p class="muted">选题后对照原页核对公式、条件和选项，再带入查题，查看茆书里的相关例题和课后题。</p>
+    <p id="catalog-summary" role="status">正在读取题库…</p>
+    <form class="card row" action="/660b">
+      <label>章节 <select name="chapter" id="chapter"><option value="">全部八章</option></select></label>
+      <label>范围 <select name="status" id="scope"><option value="available">待选素材</option><option value="review">优先核对</option><option value="used">已有专项记录</option><option value="all">全部题目</option></select></label>
+      <label>关键词 <input name="q" id="find" maxlength="150" placeholder="题号、主题或题干"></label>
+      <button>筛选</button>
+    </form>
+    <div class="layout">
+      <section class="card" aria-label="题目列表"><p id="match-count" class="muted"></p><ol class="question-list" id="question-list"></ol><nav class="row" id="pagination" aria-label="题目列表分页"></nav></section>
+      <section class="card" id="question-detail" aria-label="题目详情"><p class="muted">请选择一道题查看题干和原页。</p></section>
+    </div>
+  </main>
+  <script src="/assets/katex/katex.min.js"></script>
+  <script src="/math-render.js"></script>
+  <script src="/external-materials.js"></script>
+</body>
+</html>

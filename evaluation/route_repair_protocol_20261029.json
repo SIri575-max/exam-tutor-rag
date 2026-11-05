@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-29",
+  "baseline_report": "data/private/660b-evaluation/retrieval-runs/4d3ad059a2d51335/report.json",
+  "baseline_report_sha256": "f0c90a3012a8c7609348d689468429c865d477478e4bd435c1b16fb0b6a07867",
+  "code_backup": "archives/2026-10-29/RAG路由修复前-202012",
+  "development_selection": "All nine empty adaptive cases plus the nine already inspected explicit-source anchors. Not random; selected after baseline failure analysis.",
+  "development_case_ids": [
+    "660b-c1-q001", "660b-c1-q005", "660b-c1-q020", "660b-c4-q003", "660b-c4-q014",
+    "660b-c6-q082", "660b-c7-q002", "660b-c7-q003", "660b-c7-q004",
+    "660b-c2-q076", "660b-c2-q078", "660b-c3-q093", "660b-c3-q095", "660b-c3-q096",
+    "660b-c4-q006", "660b-c4-q007", "660b-c4-q009", "660b-c4-q016"
+  ],
+  "repair_hypotheses": [
+    "Recognize explicit probability, convergence, hypothesis-testing and Monte-Carlo cues without accepting arbitrary algebra or unrelated chat.",
+    "Do not infer Poisson from an arbitrary density p(x), Gamma/Beta from scalar Greek parameters, or Normal from n(n+1).",
+    "Recognize TeX sim, braced min/max and a closed shifted-exponential support boundary."
+  ],
+  "guards": [
+    "No answer-page content or labels used in retrieval or routing.",
+    "No case IDs or gold record IDs in production rules.",
+    "Archive baseline; freeze a new code/report identity instead of replacing old scores.",
+    "All 574 cases remain OCR/family/relevance-unreviewed. Candidate presence is not accuracy.",
+    "Do not call unselected rows a held-out test before OCR, family and exposure review.",
+    "No paid generation requests in this routing iteration."
+  ]
+}

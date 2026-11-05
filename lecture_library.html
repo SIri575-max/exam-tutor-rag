@@ -1,0 +1,40 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>茆书 · 讲义对照</title>
+<link rel="stylesheet" href="/assets/katex/katex.min.css"><link rel="stylesheet" href="/math-render.css"><script src="/assets/katex/katex.min.js"></script><script src="/math-render.js"></script>
+<style>*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#203a46;font:15px/1.85 'Segoe UI','Microsoft YaHei',sans-serif}main{max-width:1450px;margin:auto;padding:24px}a,summary{color:#17675d}nav,.row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}nav{border-bottom:1px solid #dce5e6;padding-bottom:15px}h1{font-size:28px;margin:22px 0 8px}h2{font-size:20px}h3{font-size:16px}.muted{color:#6b7d84;font-size:13px}.card{padding:20px;border:1px solid #dce5e6;border-radius:12px;background:white;margin:16px 0}.notice{background:#fff9eb;border-left:3px solid #cda34c;padding:12px 15px;font-size:13px}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}.grid>.card{margin:0}.prose{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.95}.block{border-bottom:1px solid #edf1f1;padding:8px 0}button,select{font:inherit;color:inherit;background:white;border:1px solid #cad8db;border-radius:6px;padding:6px 10px;cursor:pointer}.source{font-size:12px;margin:4px}img{width:100%}.image{max-height:78vh;overflow:auto}.badge{font-size:12px;background:#edf4f0;color:#17675d;border-radius:18px;padding:3px 10px}summary{cursor:pointer}#error{color:#a63434}@media(max-width:850px){.grid{grid-template-columns:1fr}main{padding:15px}.card{padding:16px}}</style>
+<main><nav><strong>茆书 / 讲义对照</strong><div class="row"><a href="/problems">题目检索</a><a href="/worked">分步讲解</a><a href="/validation">20题验证</a><a href="/syllabus">考纲计划</a></div></nav>
+<h1>把教材题目，连到讲义原页。</h1><p class="muted" id="coverage"></p><p class="notice">讲义页码与教材页码分别保留。算法关联、跨页范围和手写推导仍待核对；当前用于原页查阅，不作为自动生成的标准答案。</p>
+<section class="card"><div class="row"><div><button id="prev" aria-label="上一页">←</button> <label>讲义PDF页 <select id="page"></select></label> <button id="next" aria-label="下一页">→</button></div><span class="badge" id="status">待加载</span></div><div id="links"></div><div id="notes"></div><div id="spans"></div></section>
+<details class="card"><summary>按题目开头浏览本章讲义</summary><p class="muted">页码范围按阅读顺序推断；“算法候选”尚未逐题确认。</p><div id="catalog"></div></details><p id="error" role="alert"></p>
+<div class="grid"><section class="card"><h2>教材题干与讲义OCR</h2><div id="book"></div><div id="worked-links"></div><details id="ocr-details"><summary>查看未经校对的讲义识别稿</summary><p class="notice">公式即使能排版，也可能识别错误。优先对照右侧原页；广告页脚在阅读预览中单独折叠。</p><div id="ocr" class="prose"></div><details><summary>页脚等非教学内容识别记录</summary><div id="excluded" class="prose"></div></details></details></section>
+<section class="card"><h2 id="image-title">讲义原页</h2><div class="image"><img id="image" alt="讲义原页，含印刷题干与手写批注"></div></section></div></main>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let request=0,prepared=[],processed=[];
+async function api(url){const r=await fetch(url),d=await r.json();if(!r.ok)throw Error(d.error||'请求失败');return MathView.register(d)}
+function method(v){return v.matching_method.includes('visual')?'助手原图对照候选':'算法关联候选'}
+function sourceLinks(v){return v.book_pdf_pages.map(p=>'<a href="/library#page='+p+'" target="_blank">教材PDF '+p+'</a>').join(' ')}
+async function openPage(n){const token=++request;try{
+ const d=await api('/api/lecture-pilot/page?n='+n);if(token!==request)return;
+ history.replaceState(null,'','#page='+n);$('page').value=n;$('image').src='/lecture-page/6/'+n+'.png';$('image-title').textContent=d.source_name+' · PDF '+n;
+ $('prev').disabled=prepared.indexOf(n)<=0;$('next').disabled=prepared.indexOf(n)>=prepared.length-1;
+ const continuations=(d.segments||[]).filter(s=>s.start_page!==n);
+ $('status').textContent=d.links.length?'原题关联候选 · 内容待审核':continuations.length?'可能的跨页续写 · 待核对':d.ocr_cache_valid?'已识别 · 题号待定位':'原页已准备 · OCR待完成';
+ $('links').innerHTML=d.links.map(v=>'<div class="row"><h3 style="margin:5px 0">'+esc(v.book_label)+' ↔ 讲义PDF '+n+'</h3><span class="muted">'+method(v)+' · 待核对</span></div>').join('');
+ $('notes').innerHTML=d.links.length?'<ul>'+[...new Set(d.links.flatMap(v=>v.notes||[]))].map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul>':'<p class="notice">本页未确认对应原题。可从下方候选开头核对，或直接阅读右侧原页。</p>';
+ if((d.segments||[]).some(s=>(s.shared_question_pages||[]).includes(n)))$('notes').innerHTML+='<p class="notice">本页含多道题，手写讲解仍按原页保留，尚未逐题切分；请对照原图中的解答题号。</p>';
+ $('spans').innerHTML=(d.segments||[]).map(s=>'<details><summary>'+(s.start_page===n?'本页题目开头':'可能续接讲义PDF '+s.start_page)+' · 范围 '+s.pages.join('、')+'</summary><p class="muted">'+(s.start_page===n?'':'<button data-page="'+s.start_page+'">查看题目开头</button> ')+'范围根据页面阅读顺序推断，尚未逐页核对。</p><p>候选教材题（待核对）：</p>'+s.candidates.map(c=>'<p>'+esc(c.book_label)+' · '+sourceLinks(c)+' <span class="muted">文本排序分 '+c.score+'（不是概率）</span></p>').join('')+'</details>').join('');
+ $('book').innerHTML=d.book_records.map(v=>'<h3>'+esc(v.label)+'</h3><div class="prose">'+MathView.prose(v.question_text)+'</div><p>'+v.pages.map(p=>'<a class="source" href="/library#page='+p+'" target="_blank">教材原页 PDF '+p+'</a>').join(' ')+'</p>').join('')||'<p class="muted">暂无已定位的教材题干。</p>';
+ let visible='',excluded='';for(const b of d.blocks){const t=b.text||'',content='<div class="block">'+MathView.segments(b.segments,b.type)+'</div>';if(['footer','header','page_number'].includes(b.type)||/后续请关注|每日更新通知|添加微信/.test(t))excluded+=content;else visible+=content}
+ $('ocr').innerHTML=visible||'<p>尚无可显示的识别内容，请对照原页。</p>';$('excluded').innerHTML=excluded;$('error').textContent='';
+ $('worked-links').innerHTML='';const ids=[...new Set([...d.links.map(v=>v.book_record_id),...(d.segments||[]).map(v=>v.suggested_book_record_id).filter(Boolean)])];
+ if(ids.length)api('/api/worked-notes?ids='+encodeURIComponent(ids.join(','))).then(v=>{if(token===request)$('worked-links').innerHTML=v.items.map(n=>'<p><a href="/worked?id='+encodeURIComponent(n.record_id)+'">分步讲解样板 · '+esc(n.book_label)+' · 教师待审</a></p>').join('')}).catch(()=>{});
+ }catch(e){if(token===request)$('error').textContent=e.message}}
+$('page').onchange=()=>openPage(Number($('page').value));$('prev').onclick=()=>openPage(prepared[prepared.indexOf(Number($('page').value))-1]);$('next').onclick=()=>openPage(prepared[prepared.indexOf(Number($('page').value))+1]);
+document.addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b)openPage(Number(b.dataset.page))});
+api('/api/lecture-pilot').then(d=>{
+ prepared=d.prepared_pages;processed=d.processed_pages;
+ $('coverage').textContent='第六章讲义共'+d.source_total_pages+'页；原页已准备'+prepared.length+'页；OCR已完成'+processed.length+'页；'+d.links.length+'条原题关联候选。';
+ $('page').innerHTML=prepared.map(p=>'<option value="'+p+'">'+p+' · '+(processed.includes(p)?'已识别':'原页')+'</option>').join('');
+ $('catalog').innerHTML=(d.catalog||[]).map(s=>'<div class="block"><button data-page="'+s.start_page+'">讲义PDF '+s.start_page+'</button> '+esc(s.book_label||'题号'+(s.printed_number_candidate??'待识别')+' · 关联待定位')+' <span class="muted">'+method(s)+(s.pages.length>1?' · 含可能续页 '+s.pages.slice(1).join('、'):'')+'</span></div>').join('')||'<p class="muted">题目分段尚未生成。</p>';
+ const n=Number(new URLSearchParams(location.hash.slice(1)).get('page'));openPage(prepared.includes(n)?n:prepared[0]);
+}).catch(e=>$('error').textContent=e.message);
+</script></html>

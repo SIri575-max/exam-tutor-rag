@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-04",
+  "goal": "新题对应教材例题、课后题与知识点，并提供可核对的复习导航",
+  "primary_metrics": {
+    "exercise_useful_hit_at_3": null,
+    "example_useful_hit_at_3": null,
+    "topic_precision": null,
+    "source_page_correctness": null
+  },
+  "label_scale": {"0": "无关", "1": "仅背景或同主题", "2": "方法或关键步骤可借鉴", "3": "同题或完整条件近同"},
+  "required_reviews": ["原题OCR与跨页条件", "例题与课后题分别评分", "知识点与题目所需方法的关联", "题族与教材重合分层", "原页定位"],
+  "split_policy": "已查看和用于调参的题目属于开发样本；新增题先核验OCR、重复与题族，再按题族划分开发和保留测试。",
+  "boundaries": ["有候选和两类题覆盖不等于检索正确", "输入题目只能提供复习线索，不能诊断学生薄弱点", "出处开发样本不证明新题泛化或教学效果", "不将660B答案加入索引或查询"]
+}

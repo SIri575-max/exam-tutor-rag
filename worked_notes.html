@@ -1,0 +1,34 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>茆书 · 分步讲解</title>
+<link rel="stylesheet" href="/assets/katex/katex.min.css"><link rel="stylesheet" href="/math-render.css"><script src="/assets/katex/katex.min.js"></script><script src="/math-render.js"></script>
+<style>*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#203a46;font:15px/1.85 'Segoe UI','Microsoft YaHei',sans-serif}main{max-width:1450px;margin:auto;padding:24px}nav,.row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}nav{padding-bottom:15px;border-bottom:1px solid #dce5e6}a,summary{color:#17675d}h1{font-size:28px;margin:20px 0 10px}h2{font-size:20px;margin:6px 0 12px}h3{font-size:16px}.muted{font-size:13px;color:#657980}.notice{background:#fff9eb;border-left:3px solid #cda34c;padding:12px 15px;font-size:13px}.card{background:white;border:1px solid #dce5e6;border-radius:12px;padding:20px;margin:16px 0}.grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px}.prose{white-space:pre-wrap;overflow-wrap:anywhere}.hint{border-left:3px solid #237b6c;padding:10px 15px;background:#eef7f3}.pill{display:inline-block;border:1px solid #dce5e6;padding:4px 10px;border-radius:18px;margin:3px;font-size:13px}.image{max-height:64vh;overflow:auto}img{width:100%}select{font:inherit;color:inherit;padding:8px;max-width:100%;border:1px solid #cad8db;border-radius:6px;background:white}summary{cursor:pointer}.step{border-top:1px solid #edf1f1;padding:8px 0}#error{color:#a63434}.check{background:#eef7f3;padding:10px 14px;font-size:13px}@media(max-width:850px){main{padding:15px}.grid{grid-template-columns:1fr}.card{padding:16px}}</style>
+<main><nav><strong>茆书 / 分步讲解</strong><div class="row"><a href="/problems">题目检索</a><a href="/lectures">讲义原页</a><a href="/syllabus">考纲计划</a></div></nav>
+<h1>先看条件，再展开推导。</h1><p class="muted">4道讲解样板，按条件、思路、推导和对比练习展开。</p>
+<p class="notice">以下为助手整理的讲解，已做指定算术或数值检查，仍待教师确认。请结合原页和题目条件阅读。</p>
+<section class="card"><label>选择题目 <select id="note-select"></select></label><div id="error" role="alert"></div></section>
+<div class="grid"><div>
+<section class="card"><p class="muted" id="label"></p><h2 id="title"></h2><div id="stem" class="prose"></div><h3>先核对这些条件</h3><ul id="assumptions"></ul></section>
+<section class="card"><h2>从这里入手</h2><div id="hint" class="hint prose"></div><details id="derivation"><summary>展开分步推导</summary><div id="steps"></div></details><details id="conclusion-details"><summary>查看结论与易错点</summary><div id="conclusion" class="prose"></div><ul id="pitfalls"></ul><div id="extension" class="prose"></div></details></section>
+<section class="card"><h2>知识点与对比练习</h2><div id="topics"></div><p class="muted">以下知识点由助手按讲解内容关联，仍待教学审核；练习的条件可能不同，请重新核对。</p><div id="practice"></div></section>
+</div><aside>
+<section class="card"><h2>对应讲义原页</h2><div id="source-links"></div><p id="source-note" class="muted"></p><div class="image"><img id="source-image" alt="当前题目对应讲义原图"></div></section>
+<section class="card"><h2>已经检查了什么</h2><div id="check" class="check"></div><p class="muted">检查仅覆盖这里列出的计算和样例，完整推导仍需审核。</p><details><summary>查看计算记录</summary><pre id="check-detail" style="white-space:pre-wrap;font-size:12px"></pre></details></section>
+</aside></div></main>
+<script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let request=0;
+const prose=s=>MathView.prose(s);
+const checkNames={linear_weights:'用精确分数重算权重和与方差系数。',uniform_order_statistics:'从最大值与最小值密度数值积分，复核矩与缩放后的方差。',negative_binomial_beta:'直接计算“似然×先验”并积分归一化，与Beta后验密度比较。',shifted_exponential_interval:'从平移指数样本重复抽样，检查若干参数下的区间覆盖率。'};
+async function api(url){const r=await fetch(url),d=await r.json();if(!r.ok)throw Error(d.error||'读取失败');return MathView.register(d)}
+async function openNote(id){const token=++request;try{const d=await api('/api/worked-notes?id='+encodeURIComponent(id));if(token!==request)return;const n=d.note;
+ $('note-select').value=id;history.replaceState(null,'','/worked?id='+encodeURIComponent(id));$('label').textContent=n.book_label+' · 整理日期 '+n.date+' · 教师待审';$('title').textContent=n.title;$('stem').innerHTML=prose(d.book_record.question_text);
+ $('assumptions').innerHTML=n.assumptions.map(v=>'<li>'+prose(v)+'</li>').join('');$('hint').innerHTML=prose(n.hint);
+ $('steps').innerHTML=n.steps.map((s,i)=>'<section class="step"><h3>'+(i+1)+'. '+esc(s.title)+'</h3><div class="prose">'+prose(s.text)+'</div></section>').join('');
+ $('conclusion').innerHTML=prose(n.conclusion);$('pitfalls').innerHTML=n.pitfalls.map(v=>'<li>'+prose(v)+'</li>').join('');$('extension').innerHTML=n.extension?'<h3>讲义批注的扩展</h3>'+prose(n.extension):'';
+ $('derivation').open=false;$('conclusion-details').open=false;
+ $('topics').innerHTML=n.topics.map(t=>'<a class="pill" href="/library#page='+t.pdf_page+'" target="_blank">'+esc(t.label)+' · 教材PDF '+t.pdf_page+'</a>').join('');
+ $('practice').innerHTML=n.practice.map(p=>'<div class="step"><a href="/problems?q='+encodeURIComponent(p.label)+'" target="_blank">'+esc(p.label)+'</a><p>'+esc(p.reason)+'</p></div>').join('');
+ $('source-links').innerHTML='<a href="/lectures#page='+n.lecture_page+'" target="_blank">讲义PDF '+n.lecture_page+'</a> · '+n.book_pages.map(p=>'<a href="/library#page='+p+'" target="_blank">教材PDF '+p+'</a>').join(' ');$('source-note').textContent=n.source_note;$('source-image').src='/lecture-page/6/'+n.lecture_page+'.png';
+ $('check').textContent=checkNames[n.check_key]+(n.check.passed?' 本轮检查通过。':' 检查待处理。');$('check-detail').textContent=JSON.stringify(n.check,null,2);$('error').textContent='';
+ }catch(e){if(token===request)$('error').textContent=e.message}}
+$('note-select').onchange=()=>openNote($('note-select').value);
+api('/api/worked-notes').then(d=>{if(!d.items.length)throw Error('暂无已整理讲解');$('note-select').innerHTML=d.items.map(n=>'<option value="'+esc(n.record_id)+'">'+esc(n.book_label+' · '+n.title)+'</option>').join('');const id=new URLSearchParams(location.search).get('id');if(id&&!d.items.some(n=>n.record_id===id))throw Error('这道题尚未整理讲解样板');openNote(id||d.items[0].record_id)}).catch(e=>$('error').textContent=e.message);
+</script></html>
