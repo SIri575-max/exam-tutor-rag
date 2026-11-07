@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>知题 · 复习 Agent</title>
+  <link rel="stylesheet" href="/assets/katex/katex.min.css">
+  <link rel="stylesheet" href="/math-render.css">
+  <link rel="stylesheet" href="/answer-render.css">
+  <style>
+    :root{font:15px/1.65 system-ui,"Microsoft YaHei",sans-serif;color:#203a30;background:#f1f6f3}
+    *{box-sizing:border-box}body{margin:0}header{background:#fff;border-bottom:1px solid #dae7df;padding:14px 5vw}
+    main{width:min(1150px,92vw);margin:28px auto}h1{font-size:32px;margin:.2em 0}h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;margin:8px 0}
+    a{color:#1b694b}label{display:block}button,select,input,textarea{font:inherit;color:inherit;background:#fff;border:1px solid #bacfc2;border-radius:8px;padding:8px 11px}
+    button{cursor:pointer}button:disabled{cursor:wait;opacity:.65}button[aria-pressed="true"],.primary{background:#206749;color:white;border-color:#206749}
+    textarea{width:100%;min-height:120px;resize:vertical}input{max-width:100%}input[type="checkbox"]{vertical-align:middle}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(235px,1fr);gap:16px}
+    .card{background:#fff;border:1px solid #d9e7df;border-radius:14px;padding:20px;margin:14px 0;min-width:0}.muted{color:#4d6c5c}.small{font-size:13px}
+    .notice{background:#e9f5ed;border-radius:8px;padding:9px 12px}.error{color:#8b312a}.items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .item{border:1px solid #dfebe4;border-radius:10px;padding:12px;min-width:0}.item p{margin:6px 0}.prose{overflow-wrap:anywhere}
+    .graph{border:1px solid #dceae1;border-radius:12px;background:radial-gradient(circle at top,#e7f4ec,#fff 65%);padding:14px;margin-top:12px}
+    .graph-topic{text-align:center;margin:0 auto 15px;width:max-content;max-width:100%;border:1px solid #89b39c;border-radius:24px;background:#fff;padding:8px 15px}
+    .graph-branches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.graph-branch{border-top:2px solid #8ab69f;padding-top:7px;min-width:0}
+    .graph-node{display:block;width:100%;margin:4px 0;text-align:left;overflow-wrap:anywhere}.trace{padding-left:1.4em}.trace li{margin:0 0 9px}
+    @media(max-width:770px){.layout,.items,.graph-branches{grid-template-columns:1fr}h1{font-size:25px}.card{padding:15px}}
+  </style>
+</head>
+<body>
+  <header class="row"><strong>知题</strong><a href="/problems">教材查题</a><a href="/660b">题目素材库</a></header>
+  <main>
+    <h1>统计学复习 Agent</h1>
+    <p class="muted">输入题目或考点，选择查题、复习、讲解或核对答案。</p>
+    <div class="layout">
+      <div>
+        <form id="agent-form" class="card">
+          <label for="question">题目或考点</label>
+          <textarea id="question" required minlength="2" maxlength="3000" placeholder="例如：复习最大似然估计，看看教材有哪些条目和例题"></textarea>
+          <div class="row">
+            <label>任务 <select id="intent"><option value="auto">自动识别</option><option value="lookup">找相关题</option><option value="review">复习知识点</option><option value="explain">获得讲解</option><option value="check">核对答案</option></select></label>
+            <label>我的数值答案 <input id="answer" maxlength="80" placeholder="核对时填写，例如 61/216"></label>
+          </div>
+          <p><label><input id="allow-generation" type="checkbox"> 讲解时允许把当前题目与引用片段发送给已配置的模型服务</label></p>
+          <div class="row"><button id="run" class="primary">开始</button><button id="review-example" type="button">试试复习考点</button><button id="check-example" type="button">试试核对骰子题</button></div>
+        </form>
+        <section id="results" aria-label="复习结果"></section>
+      </div>
+      <aside class="card">
+        <h2>执行记录</h2>
+        <p id="status" role="status" class="muted">等待输入</p>
+        <ol id="trace" class="trace"></ol>
+      </aside>
+    </div>
+  </main>
+  <script src="/assets/katex/katex.min.js"></script>
+  <script src="/math-render.js"></script>
+  <script src="/answer-render.js"></script>
+  <script src="/agent.js"></script>
+</body>
+</html>

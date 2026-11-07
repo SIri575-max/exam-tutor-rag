@@ -30,6 +30,7 @@ import portfolio
 import external_review
 import external_materials
 import matching_evaluation
+import study_agent
 
 HTML='''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>茆书专业课辅导 · 题目知识图谱</title>
 <style>body{font:15px/1.8 "Segoe UI","Microsoft YaHei",sans-serif;background:#f3f5f8;color:#22314a;margin:0}main{max-width:1120px;margin:45px auto;padding:0 24px}h1{font-size:30px;margin-bottom:10px}.sub{color:#718096}textarea{box-sizing:border-box;width:100%;padding:17px;border:1px solid #d5dce5;border-radius:12px;font:inherit;min-height:115px}button,select{font:inherit;border:1px solid #d5dce5;border-radius:7px;padding:9px 15px;background:white;cursor:pointer}button.primary{background:#214b82;color:white;border:0}.row{display:flex;align-items:center;gap:12px;margin:15px 0;flex-wrap:wrap}.panel{background:white;border:1px solid #e1e6ed;border-radius:13px;padding:23px;margin:19px 0}.pill{display:inline-block;background:#edf2fa;color:#32588a;border:1px solid #d7e1f0;padding:4px 12px;border-radius:20px;margin:4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.hint{background:#fff8e9;color:#856a2c;padding:12px 17px;border-radius:8px;font-size:13px}.muted{color:#8390a4;font-size:12px}details{margin:12px 0}summary{cursor:pointer;color:#315d91}pre{white-space:pre-wrap;font-size:12px;background:#f7f9fc;padding:13px}img{max-width:100%;max-height:500px;object-fit:contain}a{color:#2b5b96}.graphrow{border-left:3px solid #7693bb;margin:10px;padding:8px 15px;background:#f3f6fb}.tag{font-size:11px;color:#9a722e}h2{font-size:19px}h3{font-size:16px}button:disabled{opacity:.6}@media(max-width:700px){.grid{grid-template-columns:1fr}main{margin-top:22px}h1{font-size:25px}}</style>
@@ -44,7 +45,7 @@ fetch('/api/sources').then(r=>r.json()).then(d=>document.querySelector('#catalog
 
 class Handler(BaseHTTPRequestHandler):
     def send(self,status,value,kind='application/json; charset=utf-8',attachment=None):
-        if status == 200 and isinstance(value,dict) and urlparse(self.path).path in {'/api/problem-record','/api/problem-search','/api/problem-study','/api/library/page','/api/library/objects','/api/library/search','/api/learn','/api/exercise','/api/validation-review','/api/problem-explain','/api/generation-record','/api/evaluation-comparison','/api/external-review/case'}:
+        if status == 200 and isinstance(value,dict) and urlparse(self.path).path in {'/api/problem-record','/api/problem-search','/api/problem-study','/api/library/page','/api/library/objects','/api/library/search','/api/learn','/api/exercise','/api/validation-review','/api/problem-explain','/api/generation-record','/api/evaluation-comparison','/api/external-review/case','/api/agent'}:
             value = present(value)
         raw=json.dumps(value,ensure_ascii=False).encode() if isinstance(value,dict) else value
         self.send_response(status);self.send_header('Content-Type',kind);self.send_header('Content-Length',str(len(raw)));self.send_header('Cache-Control','no-store')
@@ -52,6 +53,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers();self.wfile.write(raw)
     def do_GET(self):
         path=urlparse(self.path).path
+        if path=='/agent':return self.send(200,(ROOT/'agent.html').read_bytes(),'text/html; charset=utf-8')
+        if path=='/agent.js':return self.send(200,(ROOT/'agent.js').read_bytes(),'text/javascript; charset=utf-8')
         if path in {'/workspace-theme.css','/workspace-ui.js'}:
             asset='workspace-theme.css' if path.endswith('.css') else 'workspace_ui.js'
             return self.send(200,(ROOT/asset).read_bytes(),'text/css; charset=utf-8' if path.endswith('.css') else 'text/javascript; charset=utf-8')
@@ -227,7 +230,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200,(ROOT/'data/private/evidence'/path.split('/')[-1]).read_bytes(),'image/png')
         return self.send(404,{'error':'Not found'})
     def do_POST(self):
-        if self.path not in {'/api/query','/api/learn','/api/feedback','/api/problem-search','/api/problem-study','/api/problem-feedback','/api/validation-review','/api/problem-explain','/api/photo-ocr','/api/photo-retry','/api/photo-notebook','/api/external-review'}:return self.send(404,{'error':'Not found'})
+        if self.path not in {'/api/query','/api/learn','/api/feedback','/api/problem-search','/api/problem-study','/api/problem-feedback','/api/validation-review','/api/problem-explain','/api/photo-ocr','/api/photo-retry','/api/photo-notebook','/api/external-review','/api/agent'}:return self.send(404,{'error':'Not found'})
         origin=self.headers.get('Origin')
         if origin and urlparse(origin).netloc!=self.headers.get('Host'):return self.send(403,{'error':'Origin rejected'})
         try:
@@ -241,6 +244,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(202,photo_ocr.submit(self.rfile.read(size),json.loads(region),rotation))
             if not 0<size<=20000:raise ValueError('无效请求长度')
             body=json.loads(self.rfile.read(size))
+            if self.path=='/api/agent':return self.send(200,study_agent.run(body))
             if self.path=='/api/external-review':return self.send(200,external_review.save(body))
             if self.path=='/api/photo-notebook':return self.send(200,photo_notebook.save(body))
             if self.path=='/api/photo-retry':return self.send(202,photo_ocr.resubmit(body.get('job_id'),body.get('crop'),body.get('rotation',0)))
