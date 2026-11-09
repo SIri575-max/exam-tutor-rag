@@ -244,7 +244,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(202,photo_ocr.submit(self.rfile.read(size),json.loads(region),rotation))
             if not 0<size<=20000:raise ValueError('无效请求长度')
             body=json.loads(self.rfile.read(size))
-            if self.path=='/api/agent':return self.send(200,study_agent.run(body))
+            if self.path=='/api/agent':
+                if isinstance(body,dict) and 'action' in body:
+                    try:import study_workflow
+                    except ModuleNotFoundError:return self.send(503,{'error':'请先安装 requirements-agent.txt 中的依赖。'})
+                    try:return self.send(200,study_workflow.handle(body))
+                    except study_workflow.StaleTask as e:return self.send(409,{'error':str(e)})
+                return self.send(200,study_agent.run(body))
             if self.path=='/api/external-review':return self.send(200,external_review.save(body))
             if self.path=='/api/photo-notebook':return self.send(200,photo_notebook.save(body))
             if self.path=='/api/photo-retry':return self.send(202,photo_ocr.resubmit(body.get('job_id'),body.get('crop'),body.get('rotation',0)))

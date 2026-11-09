@@ -22,6 +22,8 @@
     .graph-topic{text-align:center;margin:0 auto 15px;width:max-content;max-width:100%;border:1px solid #89b39c;border-radius:24px;background:#fff;padding:8px 15px}
     .graph-branches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.graph-branch{border-top:2px solid #8ab69f;padding-top:7px;min-width:0}
     .graph-node{display:block;width:100%;margin:4px 0;text-align:left;overflow-wrap:anywhere}.trace{padding-left:1.4em}.trace li{margin:0 0 9px}
+    .field{display:block;margin:12px 0}.field input{display:block;width:100%}.preview{max-width:100%;max-height:320px}
+    summary{cursor:pointer}.photo-panel{margin:14px 0}.photo-panel input{max-width:100%}
     @media(max-width:770px){.layout,.items,.graph-branches{grid-template-columns:1fr}h1{font-size:25px}.card{padding:15px}}
   </style>
 </head>
@@ -29,18 +31,28 @@
   <header class="row"><strong>知题</strong><a href="/problems">教材查题</a><a href="/660b">题目素材库</a></header>
   <main>
     <h1>统计学复习 Agent</h1>
-    <p class="muted">输入题目或考点，选择查题、复习、讲解或核对答案。</p>
+    <p class="muted">拍照或输入一道题，找茆书中的例题、课后题和对应考点。需要补充条件时，可以稍后继续。</p>
     <div class="layout">
       <div>
         <form id="agent-form" class="card">
           <label for="question">题目或考点</label>
-          <textarea id="question" required minlength="2" maxlength="3000" placeholder="例如：复习最大似然估计，看看教材有哪些条目和例题"></textarea>
+          <textarea id="question" minlength="2" maxlength="3000" placeholder="例如：有一组样本，求参数估计"></textarea>
+          <details class="photo-panel">
+            <summary>拍照或上传题图</summary>
+            <p class="small muted">请选择只含一道题的图片，识别完成后可对照原图修改公式。</p>
+            <div class="row">
+              <input id="photo-file" aria-label="题图" type="file" accept="image/png,image/jpeg,image/webp" capture="environment">
+              <button id="photo-start" type="button">识别文字与公式</button>
+              <button id="photo-clear" type="button" hidden>移除题图</button>
+            </div>
+            <p id="photo-status" role="status" class="muted small"></p>
+          </details>
           <div class="row">
             <label>任务 <select id="intent"><option value="auto">自动识别</option><option value="lookup">找相关题</option><option value="review">复习知识点</option><option value="explain">获得讲解</option><option value="check">核对答案</option></select></label>
             <label>我的数值答案 <input id="answer" maxlength="80" placeholder="核对时填写，例如 61/216"></label>
           </div>
           <p><label><input id="allow-generation" type="checkbox"> 讲解时允许把当前题目与引用片段发送给已配置的模型服务</label></p>
-          <div class="row"><button id="run" class="primary">开始</button><button id="review-example" type="button">试试复习考点</button><button id="check-example" type="button">试试核对骰子题</button></div>
+          <div class="row"><button id="run" class="primary">开始新任务</button><button id="followup-example" type="button">试试补充题目条件</button><button id="review-example" type="button">试试复习考点</button><button id="check-example" type="button">试试核对骰子题</button></div>
         </form>
         <section id="results" aria-label="复习结果"></section>
       </div>

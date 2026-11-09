@@ -2,7 +2,7 @@
 
 知题帮助学习者用文字或题图定位相关教材例题、课后题和知识点。系统在本机处理资料，展示命中片段、条件差异和来源页。660B 素材库提供题干核对与查题入口，人工核对页用于记录教材题的相关性。
 
-复习 Agent 第一版提供意图识别、教材检索、图谱复习路径、讲解依据和有限题型的数值核对。启动后打开[本机 Agent](http://127.0.0.1:8771/agent)。实现边界和后训练计划见[Agent 迭代路线](docs/agent-roadmap.md)。
+复习 Agent 用 LangGraph 串联拍照核对、意图识别、教材检索、图谱补检、讲解依据和有限题型的数值核对。遇到缺失条件会保存任务，刷新后可从当前问题继续。启动后打开[本机 Agent](http://127.0.0.1:8771/agent)。演示、对照结果和边界见[LangGraph 实现说明](docs/langgraph-study-workflow.md)。
 
 ## 功能与实现
 
@@ -28,6 +28,7 @@ python -m unittest discover -s tests -p "test_retrieval_metrics.py"
 ```powershell
 py -3.12 -m venv .venv-rag
 & ./.venv-rag/Scripts/python.exe -m pip install -r requirements-retrieval.txt
+& ./.venv-rag/Scripts/python.exe -m pip install -r requirements-agent.txt
 ./start_demo.ps1
 ```
 

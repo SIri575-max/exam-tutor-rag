@@ -92,7 +92,7 @@ def check_answer(question, answer):
     return 'checked', message, calculation
 
 
-def run(body):
+def parse_request(body):
     if not isinstance(body, dict):
         raise ValueError('请输入题干或知识点。')
     question = body.get('question')
@@ -105,15 +105,35 @@ def run(body):
         raise ValueError('请选择有效的任务。')
     if not isinstance(answer, str) or len(answer) > 80:
         raise ValueError('答案最多 80 字。')
+    return question, requested, answer.strip()
+
+
+def classify(question, requested, answer):
     matched = next(((intent, found[0]) for intent, pattern in RULES if (found := re.search(pattern, question))), None)
     if requested != 'auto':
         intent, basis = requested, '手动选择'
-    elif answer.strip():
+    elif answer:
         intent, basis = 'check', '已填写数值答案'
     elif matched:
         intent, basis = matched
     else:
         intent, basis = 'lookup', '默认查题'
+    return intent, basis
+
+
+def assess_candidates(retrieved):
+    groups = retrieved.get('practice_groups', {})
+    typed = groups.get('example', [])[:3] + groups.get('exercise', [])[:3]
+    unique = {row['id']: row for row in typed + retrieved['hits']}
+    sourced = [row for row in unique.values() if has_source(row)]
+    supported = [row for row in sourced if row.get('correspondence', {}).get('level') in USEFUL_RELATIONS
+                 and not row.get('correspondence', {}).get('condition_conflict')]
+    return sourced, supported
+
+
+def run(body):
+    question, requested, answer = parse_request(body)
+    intent, basis = classify(question, requested, answer)
     result = {'intent': intent, 'intent_label': INTENTS[intent], 'trace': [
         {'step': '意图识别', 'detail': f'{INTENTS[intent]} · {basis}'},
     ]}
@@ -149,12 +169,7 @@ def run(body):
         result['clarifications'] = retrieved['clarifications']
         return finish('needs_context', retrieved['message'])
 
-    groups = retrieved.get('practice_groups', {})
-    typed = groups.get('example', [])[:3] + groups.get('exercise', [])[:3]
-    unique = {row['id']: row for row in typed + retrieved['hits']}
-    sourced = [row for row in unique.values() if has_source(row)]
-    supported = [row for row in sourced if row.get('correspondence', {}).get('level') in USEFUL_RELATIONS
-                 and not row.get('correspondence', {}).get('condition_conflict')]
+    sourced, supported = assess_candidates(retrieved)
     result['topics'] = retrieved.get('correspondence', {}).get('input_topics', [])[:5]
     result['recommendations'] = sourced[:8]
     result['clarifications'] = retrieved.get('clarifications', [])
