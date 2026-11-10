@@ -84,9 +84,12 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/api/external-review'):
             args=parse_qs(urlparse(self.path).query)
             try:
-                if path=='/api/external-review':return self.send(200,external_review.overview())
-                if path=='/api/external-review/case':return self.send(200,external_review.get_case(args.get('id',[''])[0]))
-                if path=='/api/external-review/export':return self.send(200,external_review.export(),attachment='660b-human-reviews.json')
+                suite=args.get('suite',['retrieval'])[0]
+                if path=='/api/external-review':return self.send(200,external_review.overview(suite))
+                if path=='/api/external-review/case':return self.send(200,external_review.get_case(args.get('id',[''])[0],suite))
+                if path=='/api/external-review/export':
+                    attachment='660b-agent-reviews.json' if suite=='agent' else '660b-human-reviews.json'
+                    return self.send(200,external_review.export(suite),attachment=attachment)
                 if path=='/api/external-review/image':return self.send(200,external_review.image_bytes(int(args.get('n',['0'])[0])),'image/png')
             except FileNotFoundError:return self.send(404,{'error':'评测快照尚未准备好，请先完成本地评测并选择审核快照'})
             except ValueError as e:return self.send(400,{'error':str(e)})

@@ -81,6 +81,17 @@ class ExternalReviewTests(unittest.TestCase):
         self.path.write_text(json.dumps({**self.report,'changed':True}),encoding='utf-8')
         with self.assertRaises(ValueError):review.get_case(self.identifier)
 
+    def test_agent_suite_uses_a_separate_pointer_and_rejects_legacy_submission(self):
+        path=self.base/'agent-runs/fixture/report.json';path.parent.mkdir(parents=True)
+        case={**self.case,'arms':{name:self.case['arms']['hybrid'] for name in review.AGENT_ARMS}}
+        path.write_text(json.dumps({**self.report,'cases':[case]}),encoding='utf-8')
+        pointer=review.activate(path,'agent')
+        with self.assertRaises(ValueError):
+            review.save({**self.body,'report_sha256':pointer['report_sha256']})
+        review.save({**self.body,'report_sha256':pointer['report_sha256'],'suite':'agent'})
+        self.assertEqual(review.get_case(self.identifier,'agent')['state']['revision'],1)
+        self.assertEqual(review.get_case(self.identifier)['state']['revision'],0)
+
     def test_source_image_endpoint_never_serves_answers_or_arbitrary_paths(self):
         (self.base/'pages').mkdir();(self.base/'pages/pdf-006.png').write_bytes(b'question-image')
         self.assertEqual(review.image_bytes(6),b'question-image')

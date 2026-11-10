@@ -12,6 +12,8 @@ from external_question_bank import BASE, ROOT, write_json
 from score_external_relevance import score_case, template
 
 LOCK=threading.Lock()
+AGENT_ARMS=('retrieval_only','agent_single','agent_adaptive')
+RETRIEVAL_ARMS=('bm25','vector','hybrid','adaptive_rag')
 STRATA={'exact_textbook_duplicate','parameter_or_wording_variant','related_concept_new_problem',
         'outside_current_scope','unresolved'}
 
@@ -19,15 +21,29 @@ STRATA={'exact_textbook_duplicate','parameter_or_wording_variant','related_conce
 class ConflictError(ValueError):pass
 
 
-def activate(report_path):
+def suite_paths(suite):
+    if suite == 'retrieval':
+        return BASE/'retrieval-runs', BASE/'active-review.json', RETRIEVAL_ARMS
+    if suite == 'agent':
+        return BASE/'agent-runs', BASE/'active-agent-review.json', AGENT_ARMS
+    raise ValueError('未知评测范围')
+
+
+def activate(report_path, suite='retrieval'):
+    reports, selection, expected = suite_paths(suite)
     path=Path(report_path).resolve()
-    if not path.is_relative_to((BASE/'retrieval-runs').resolve()) or path.name!='report.json':
+    if not path.is_relative_to(reports.resolve()) or path.name!='report.json':
         raise ValueError('Only a private retrieval report may be selected')
     raw=path.read_bytes();report=json.loads(raw)
-    if len(report['cases'])!=len(report['frozen_cases']) or any(len(c['arms'])!=4 for c in report['cases']):
+    actual=[c['case_id'] for c in report['cases']]
+    frozen=[c['case_id'] for c in report['frozen_cases']]
+    if not actual or actual!=frozen or len(set(actual))!=len(actual) or any(set(c['arms'])!=set(expected) for c in report['cases']):
         raise ValueError('Finish the report before opening human review')
     value={'report':path.relative_to(BASE).as_posix(),'report_sha256':hashlib.sha256(raw).hexdigest()}
-    write_json(BASE/'active-review.json',value)
+    with LOCK:
+        temporary=selection.with_suffix('.tmp')
+        write_json(temporary,value)
+        temporary.replace(selection)
     return value
 
 
@@ -39,10 +55,13 @@ def _load(path_text,expected):
     return report,{c['case_id']:c for c in report['cases']}
 
 
-def context():
-    pointer=json.loads((BASE/'active-review.json').read_text(encoding='utf-8'))
+def context(suite='retrieval'):
+    reports, selection, _ = suite_paths(suite)
+    if not selection.exists():
+        raise ValueError('该评测范围尚未冻结题目')
+    pointer=json.loads(selection.read_text(encoding='utf-8'))
     path=(BASE/pointer['report']).resolve()
-    if not path.is_relative_to((BASE/'retrieval-runs').resolve()) or path.name!='report.json':raise ValueError('Invalid review snapshot')
+    if not path.is_relative_to(reports.resolve()) or path.name!='report.json':raise ValueError('Invalid review snapshot')
     if hashlib.sha256(path.read_bytes()).hexdigest()!=pointer['report_sha256']:raise ValueError('Report changed; re-pin the snapshot explicitly')
     report,cases=_load(str(path),pointer['report_sha256'])
     return pointer,report,cases
@@ -80,26 +99,26 @@ def source_checks(cases):
     return hints
 
 
-def overview():
-    pointer,report,cases=context();dev=development_ids();rows=[];checks=source_checks(cases)
+def overview(suite='retrieval'):
+    pointer,report,cases=context(suite);dev=development_ids();rows=[];checks=source_checks(cases)
     for identifier,c in cases.items():
         state=read_state(pointer['report_sha256'],identifier);current=state['current'] or {}
         rows.append({'case_id':identifier,'chapter':c['chapter'],'source_pages':c['source_pages'],
                      'status':current.get('status','pending'),'revision':state['revision'],
                      'development':identifier in dev,'preview':c['query'][:100],
                      'search_text':c['query'],'source_checks':checks[identifier]})
-    return {'report_sha256':pointer['report_sha256'],'cases':rows,'total':len(rows),
+    return {'suite':suite,'report_sha256':pointer['report_sha256'],'cases':rows,'total':len(rows),
             'approved':sum(c['status']=='approved' for c in rows),'source_pages':146,
             'boundary':'Blind pooled review; all grades require explicit human entry. No held-out split has been approved.'}
 
 
-def get_case(identifier):
-    pointer,report,cases=context()
+def get_case(identifier, suite='retrieval'):
+    pointer,report,cases=context(suite)
     if identifier not in cases:raise ValueError('Unknown review case')
     c=cases[identifier]
     pool={h['id']:h for a in c['arms'].values() for h in a.get('hits',[])}
     # Hide routes, ranks, scores, expected IDs and answer pages from blind relevance review.
-    candidates=[{k:pool[i].get(k) for k in ['id','label','question_text','pages','section']} for i in sorted(pool)]
+    candidates=[{k:pool[i].get(k) for k in ['id','kind','label','question_text','pages','section']} for i in sorted(pool)]
     return {'report_sha256':pointer['report_sha256'],'case_id':identifier,'query':c['query'],
             'source_pages':c['source_pages'],'candidates':candidates,'development':identifier in development_ids(),
             'source_checks':source_checks(cases)[identifier],
@@ -109,7 +128,7 @@ def get_case(identifier):
 def save(body):
     if not isinstance(body,dict):raise ValueError('Invalid review')
     with LOCK:
-        pointer,report,cases=context();identifier=body.get('case_id')
+        pointer,report,cases=context(body.get('suite','retrieval'));identifier=body.get('case_id')
         if identifier not in cases or body.get('report_sha256')!=pointer['report_sha256']:raise ValueError('Review snapshot mismatch')
         state=read_state(pointer['report_sha256'],identifier)
         if type(body.get('base_revision')) is not int or body['base_revision']!=state['revision']:raise ConflictError('审核已更新，请重新载入后编辑')
@@ -138,8 +157,8 @@ def save(body):
         return {'saved':True,'case_id':identifier,'revision':value['revision'],'status':status}
 
 
-def export():
-    pointer,report,cases=context();data=template(report);data['report_sha256']=pointer['report_sha256']
+def export(suite='retrieval'):
+    pointer,report,cases=context(suite);data=template(report);data['report_sha256']=pointer['report_sha256']
     for n,c in enumerate(data['cases']):
         current=read_state(pointer['report_sha256'],c['case_id'])['current']
         if current:data['cases'][n]=current
@@ -152,4 +171,8 @@ def image_bytes(number):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('report');print(json.dumps(activate(p.parse_args().report)))
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('report')
+    p.add_argument('--suite',choices=('retrieval','agent'),default='retrieval')
+    args=p.parse_args()
+    print(json.dumps(activate(args.report,args.suite)))
