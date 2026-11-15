@@ -251,7 +251,11 @@ class Handler(BaseHTTPRequestHandler):
                 if isinstance(body,dict) and 'action' in body:
                     try:import study_workflow
                     except ModuleNotFoundError:return self.send(503,{'error':'请先安装 requirements-agent.txt 中的依赖。'})
-                    try:return self.send(200,study_workflow.handle(body))
+                    try:
+                        if body.get('engine')=='model':
+                            import reasoning_agent
+                            return self.send(200,reasoning_agent.handle(body))
+                        return self.send(200,study_workflow.handle(body))
                     except study_workflow.StaleTask as e:return self.send(409,{'error':str(e)})
                 return self.send(200,study_agent.run(body))
             if self.path=='/api/external-review':return self.send(200,external_review.save(body))

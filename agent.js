@@ -63,6 +63,8 @@ function showResult(data) {
   const summary = append(results, 'section', '', 'card');
   append(summary, 'h2', data.intent_label);
   append(summary, 'p', data.decision.message, 'notice');
+  if (data.model_calls !== undefined) append(summary, 'p',
+    `模型调用 ${data.model_calls} 次 · 工具执行 ${data.tool_count} 次 · ${data.memory_saved ? '已保存学习记录' : '本轮记录可查看'}`, 'muted small');
   if (data.clarification) showClarification(results, data);
   for (const detail of data.clarifications || []) append(summary, 'p', detail, 'muted');
   if (data.calculation) {
@@ -73,7 +75,7 @@ function showResult(data) {
   else if (data.topics?.length) append(summary, 'p', '考点线索 · ' + data.topics.map(topic => topic.label).join('、'), 'muted');
   if (data.teaching?.used) {
     const teaching = append(results, 'section', '', 'card');
-    append(teaching, 'h2', '讲解提示');
+    append(teaching, 'h2', '学习讲解');
     append(teaching, 'div', '', 'prose').innerHTML = AnswerView.render(data.teaching.text);
   }
   if (data.evidence?.length) {
@@ -104,9 +106,23 @@ function showResult(data) {
       }
     }
   }
+  if (data.memories?.length) {
+    const section = append(results, 'section', '', 'card');
+    append(section, 'h2', '本机学习记录');
+    for (const memory of data.memories) {
+      append(section, 'p', memory.question);
+      append(section, 'p', memory.summary, 'muted small');
+    }
+  }
 }
 
 const taskKey = 'zhiti.study-task';
+const learnerKey = 'zhiti.learner';
+let learnerId = localStorage.getItem(learnerKey);
+if (!/^[a-f0-9]{32}$/.test(learnerId || '')) {
+  learnerId = crypto.randomUUID().replaceAll('-', '');
+  localStorage.setItem(learnerKey, learnerId);
+}
 let photoJob = '', busy = false, photoBusy = false;
 
 function clearPhoto() {
@@ -214,7 +230,7 @@ function showClarification(results, data) {
   form.onsubmit = event => {
     event.preventDefault();
     const reply = Object.fromEntries([...fields].map(([key, input]) => [key, input.value]));
-    sendTask({action: 'resume', task_id: data.task_id, checkpoint: prompt.checkpoint, reply,
+    sendTask({action: 'resume', task_id: data.task_id, engine: data.engine || 'rule', checkpoint: prompt.checkpoint, reply,
       allow_generation: readConsent()});
   };
 }
@@ -241,13 +257,17 @@ async function sendTask(request) {
   byId('status').textContent = '正在处理…';
   byId('status').className = 'muted';
   try {
+    request.learner_id = learnerId;
+    if (request.engine === 'model' && request.action !== 'get' && request.allow_generation !== true)
+      throw new Error('使用模型选择工具前，请勾选允许本轮模型调用。');
     const data = await readJSON(await fetch('/api/agent', {method: 'POST',
       headers: {'Content-Type': 'application/json'}, body: JSON.stringify(request)}));
-    sessionStorage.setItem(taskKey, data.task_id);
+    sessionStorage.setItem(taskKey, JSON.stringify({task_id: data.task_id, engine: data.engine || 'rule'}));
     clearPhoto();
     byId('question').value = data.question;
     byId('intent').value = data.requested;
     byId('answer').value = data.answer;
+    byId('engine').value = data.engine || 'rule';
     display(data);
   } catch (error) {
     if (request.action === 'get' && error.status === 409) sessionStorage.removeItem(taskKey);
@@ -262,7 +282,12 @@ async function sendTask(request) {
 byId('agent-form').onsubmit = event => {
   event.preventDefault();
   sendTask({action: 'start', question: byId('question').value, intent: byId('intent').value,
-    answer: byId('answer').value, photo_job: photoJob, allow_generation: readConsent()});
+    engine: byId('engine').value, answer: byId('answer').value, photo_job: photoJob, allow_generation: readConsent()});
 };
 const previousTask = sessionStorage.getItem(taskKey);
-if (previousTask) sendTask({action: 'get', task_id: previousTask});
+if (previousTask) {
+  let saved;
+  try { saved = JSON.parse(previousTask); }
+  catch { saved = {task_id: previousTask, engine: 'rule'}; }
+  if (saved?.task_id) sendTask({action: 'get', ...saved});
+}

@@ -48,10 +48,11 @@
             <p id="photo-status" role="status" class="muted small"></p>
           </details>
           <div class="row">
+            <label>运行方式 <select id="engine"><option value="model">模型选择工具</option><option value="rule" selected>规则流程对照</option></select></label>
             <label>任务 <select id="intent"><option value="auto">自动识别</option><option value="lookup">找相关题</option><option value="review">复习知识点</option><option value="explain">获得讲解</option><option value="check">核对答案</option></select></label>
             <label>我的数值答案 <input id="answer" maxlength="80" placeholder="核对时填写，例如 61/216"></label>
           </div>
-          <p><label><input id="allow-generation" type="checkbox"> 讲解时允许把当前题目与引用片段发送给已配置的模型服务</label></p>
+          <p><label><input id="allow-generation" type="checkbox"> 允许本轮模型调用，发送题目、工具证据和必要学习记录</label></p>
           <div class="row"><button id="run" class="primary">开始新任务</button><button id="followup-example" type="button">试试补充题目条件</button><button id="review-example" type="button">试试复习考点</button><button id="check-example" type="button">试试核对骰子题</button></div>
         </form>
         <section id="results" aria-label="复习结果"></section>
