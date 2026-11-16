@@ -19,6 +19,7 @@ import photo_ocr
 import study_agent
 import study_memory
 import study_tools
+import context_engineering
 from study_workflow import ID, LOCKS, StaleTask, clarification, validated_reply
 from tutor_provider import configuration, status, transport
 from retrieval import ROOT
@@ -193,7 +194,12 @@ def tools(state, runtime: Runtime[Context]):
             # Validation messages may contain user inputs, so return only the exception class.
             output = {'error': type(error).__name__, 'message': '工具参数或前置条件不满足，请按工具说明调整。'}
             updates['trace'].append({'step': '工具反馈', 'detail': name + ' · 参数或前置条件需调整'})
-        messages.append({'role': 'tool', 'tool_call_id': call['id'], 'content': json.dumps(output, ensure_ascii=False)})
+        packed = context_engineering.pack(name, output)
+        policy = packed['context_policy']
+        updates['trace'].append({'step': 'GSSC上下文', 'detail': name + ' · 原始' + str(policy['input_chars']) +
+                                '字符，模型上下文' + str(context_engineering.size(packed)) +
+                                '字符；按完整条目选择，保留条件和引用。'})
+        messages.append({'role': 'tool', 'tool_call_id': call['id'], 'content': json.dumps(packed, ensure_ascii=False, separators=(',', ':'))})
     updates['messages'] = messages
     return updates
 

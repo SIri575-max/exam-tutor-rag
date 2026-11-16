@@ -19,6 +19,8 @@ function pageLinks(parent, pages) {
 }
 
 function showGraph(parent, topics, paths) {
+  if (!topics?.length) topics = [...new Set(paths.map(path => path.topic_id))].map(id => ({id, label: '本次查询关联'}));
+  if (!topics.length) return;
   const section = append(parent, 'section', '', 'card');
   append(section, 'h2', '知识图谱');
   const selectors = append(section, 'div', '', 'row');

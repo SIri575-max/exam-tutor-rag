@@ -113,6 +113,26 @@ class ReasoningAgentTests(unittest.TestCase):
         self.assertTrue(any(row['step'] == '引用反馈' for row in response['trace']))
 
     @patch('study_tools.execute')
+    def test_graph_observation_then_source_and_citation_survives_gssc(self, execute):
+        execute.side_effect = [
+            {'topics': [], 'paths': [{'node': {'id': 'definition-6.3.1', 'pages': [300]},
+                                     'source_pages': [300], 'relation': 'contains_source_unit'}],
+             'network': {'nodes': [{'id': 'definition-6.3.1'}], 'edges': []}},
+            {'record_id': 'definition-6.3.1', 'title': '定义6.3.1',
+             'text': r'模型参数为$\theta$，不自动改变总体条件。', 'pages': [300]},
+        ]
+        request = self.scripted(call('knowledge_path', {'topic': '最大似然估计'}),
+                                call('read_source', {'record_id': 'definition-6.3.1'}),
+                                answer('可参考定义中的模型条件[E1]。'))
+        response = self.invoke(request, intent='explain')
+        self.assertEqual(response['decision']['status'], 'citation_checked')
+        observed = json.loads(self.payloads[2]['messages'][-1]['content'])
+        self.assertEqual(observed['id'], 'E1')
+        self.assertEqual(observed['text'], r'模型参数为$\theta$，不自动改变总体条件。')
+        self.assertEqual(observed['context_policy']['name'], 'GSSC-whole-record-v1')
+        self.assertTrue(any(row['step'] == 'GSSC上下文' for row in response['trace']))
+
+    @patch('study_tools.execute')
     def test_lookup_displays_source_backed_candidates_without_requiring_a_generated_solution(self, execute):
         execute.return_value = {'status': 'candidate_matches',
             'recommendations': [{'id': 'mao3-6.1-6', 'kind': 'exercise', 'pages': [294]}],

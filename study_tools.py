@@ -1,5 +1,6 @@
 """Typed, local study tools. Each model action is validated before execution."""
 import re
+import sqlite3
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -8,6 +9,7 @@ import exercise_vectors
 import full_book_tutor
 import study_agent
 import study_memory
+import knowledge_store
 
 
 class Arguments(BaseModel):
@@ -43,7 +45,7 @@ class Ask(Arguments):
 SCHEMAS = {
     'search_textbook': (Search, '检索茆书例题和课后题，返回考点、出处和条件差异。query 保留原题条件。可按教材小节 section 补检。'),
     'read_source': (Source, '读取本次检索或图谱已找到的教材题原文与例题讲解，取得可引用的 E 编号。'),
-    'knowledge_path': (Topic, '按知识点查有出处的教材条目、例题及课后题复习路径。'),
+    'knowledge_path': (Topic, '按知识点或题号查有来源的章节、教材条目、例题及课后题邻居。区分目录位置、字面提及和原文引用，不视为已审核考点。'),
     'check_answer': (Check, '核对用户原题与答案，工具自行读取原始输入。支持范围有限，返回精确核对或待核验状态。'),
     'recall_memory': (Recall, '检索当前学习者以往任务的记录，用于复习建议。历史记录带待核验状态。'),
     'ask_clarification': (Ask, '题干不足或答案缺失时暂停并追问。estimation 追问模型与参数，question 追问完整题干，answer 追问数值答案。'),
@@ -83,7 +85,30 @@ def execute(name, raw, state, memory_path=study_memory.DB):
                 'search_section': args['section']}
     if name == 'knowledge_path':
         topics, paths = study_agent.topic_paths(args['topic'])
-        return {'topics': topics, 'paths': paths}
+        try:
+            network = knowledge_store.neighborhood(args['topic'], node_limit=24)
+            known = {p['node']['id'] for p in paths}
+            nodes = {n['id']: n for n in network['nodes']}
+            # A numbered question can anchor a path without being a skill label.
+            if not topics:
+                topics = [{'id': i, 'label': nodes[i]['label'], 'relation': 'query_anchor_not_skill_label'}
+                          for i in network['seed_ids'] if i in nodes]
+            for edge in network['edges']:
+                for identifier in (edge['from'], edge['to']):
+                    node = nodes[identifier]
+                    if identifier in known or node['kind'] in {'topic', 'section', 'chapter'} or not study_agent.has_source(node):
+                        continue
+                    if len(paths) >= 18:
+                        break
+                    paths.append({'topic_id': network['seed_ids'][0], 'node': node,
+                                  'relation': edge['kind'], 'relation_label': edge['relation_label'],
+                                  'source_pages': edge['source_pages'], 'review_status': edge['review_status']})
+                    known.add(identifier)
+            # Keep the model context bounded; the full manifest is available from the graph API.
+            network.pop('report', None)
+        except (ValueError, OSError, sqlite3.Error) as error:
+            network = {'status': 'unavailable', 'message': str(error)}
+        return {'topics': topics, 'paths': paths, 'network': network}
     if name == 'read_source':
         identifier = args['record_id']
         known = {r['id'] for r in state.get('candidates', [])}

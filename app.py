@@ -2,6 +2,7 @@
 import argparse
 import json
 import mimetypes
+import sqlite3
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse,parse_qs
@@ -31,6 +32,7 @@ import external_review
 import external_materials
 import matching_evaluation
 import study_agent
+import knowledge_store
 
 HTML='''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>茆书专业课辅导 · 题目知识图谱</title>
 <style>body{font:15px/1.8 "Segoe UI","Microsoft YaHei",sans-serif;background:#f3f5f8;color:#22314a;margin:0}main{max-width:1120px;margin:45px auto;padding:0 24px}h1{font-size:30px;margin-bottom:10px}.sub{color:#718096}textarea{box-sizing:border-box;width:100%;padding:17px;border:1px solid #d5dce5;border-radius:12px;font:inherit;min-height:115px}button,select{font:inherit;border:1px solid #d5dce5;border-radius:7px;padding:9px 15px;background:white;cursor:pointer}button.primary{background:#214b82;color:white;border:0}.row{display:flex;align-items:center;gap:12px;margin:15px 0;flex-wrap:wrap}.panel{background:white;border:1px solid #e1e6ed;border-radius:13px;padding:23px;margin:19px 0}.pill{display:inline-block;background:#edf2fa;color:#32588a;border:1px solid #d7e1f0;padding:4px 12px;border-radius:20px;margin:4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.hint{background:#fff8e9;color:#856a2c;padding:12px 17px;border-radius:8px;font-size:13px}.muted{color:#8390a4;font-size:12px}details{margin:12px 0}summary{cursor:pointer;color:#315d91}pre{white-space:pre-wrap;font-size:12px;background:#f7f9fc;padding:13px}img{max-width:100%;max-height:500px;object-fit:contain}a{color:#2b5b96}.graphrow{border-left:3px solid #7693bb;margin:10px;padding:8px 15px;background:#f3f6fb}.tag{font-size:11px;color:#9a722e}h2{font-size:19px}h3{font-size:16px}button:disabled{opacity:.6}@media(max-width:700px){.grid{grid-template-columns:1fr}main{margin-top:22px}h1{font-size:25px}}</style>
@@ -53,6 +55,15 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers();self.wfile.write(raw)
     def do_GET(self):
         path=urlparse(self.path).path
+        if path=='/knowledge':return self.send(200,(ROOT/'knowledge.html').read_bytes(),'text/html; charset=utf-8')
+        if path=='/knowledge.js':return self.send(200,(ROOT/'knowledge.js').read_bytes(),'text/javascript; charset=utf-8')
+        if path=='/api/knowledge':
+            args=parse_qs(urlparse(self.path).query)
+            try:
+                return self.send(200,knowledge_store.neighborhood(
+                    query=args.get('q',[''])[0], depth=int(args.get('depth',['1'])[0]),
+                    node_limit=int(args.get('limit',['40'])[0]), relation=args.get('relation',[''])[0]))
+            except (ValueError,OSError,sqlite3.Error) as error:return self.send(400,{'error':str(error)})
         if path=='/agent':return self.send(200,(ROOT/'agent.html').read_bytes(),'text/html; charset=utf-8')
         if path=='/agent.js':return self.send(200,(ROOT/'agent.js').read_bytes(),'text/javascript; charset=utf-8')
         if path in {'/workspace-theme.css','/workspace-ui.js'}:
